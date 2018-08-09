@@ -70,7 +70,14 @@ run netEnv@NetEnv{ nodes } = runM . interpret (\case
     threadId <- forkIO $
       Warp.run (toPort nodeId) (app storage)
 
-    modifyMVar_ nodes $ pure . Map.insert nodeId (NodeEnv nodeId storage threadId)
+    let transport = Nothing
+
+    modifyMVar_ nodes $ pure . Map.insert nodeId NodeEnv{
+        nodeId
+      , storage
+      , threadId
+      , transport
+      }
 
   )
 

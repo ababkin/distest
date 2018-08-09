@@ -64,6 +64,7 @@ run proxy netEnv@NetEnv{ nodes } = interpret (\case
   StartNodeServer nodeId -> do
     -- TODO
     storage <- newMVar' proxy "empty"
+    transport <- Just <$> newTransport proxy
 
     threadId <- fork' proxy $
       {- (panic "server unimplemented" :: m ()) -}
@@ -71,10 +72,16 @@ run proxy netEnv@NetEnv{ nodes } = interpret (\case
       -- asynchronously start the node's server
       pass
 
-    modifyMVar_' proxy nodes $ pure . Map.insert nodeId (NodeEnv nodeId storage threadId)
+    modifyMVar_' proxy nodes $ pure . Map.insert nodeId NodeEnv{
+        nodeId
+      , storage
+      , threadId
+      , transport
+      }
 
   )
 
   where
     setVal :<|> getVal = api `clientIn` (Proxy :: Proxy (TestClient effs m))
 
+    newTransport p = Transport <$> newEmptyMVar' p <*> newEmptyMVar' p

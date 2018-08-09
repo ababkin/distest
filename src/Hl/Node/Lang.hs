@@ -27,10 +27,28 @@ newtype NodeId = NodeId Int
 toPort :: NodeId -> Int
 toPort (NodeId n) = 8080 + n
 
+
+data TestReq =
+    ReqSetVal Text
+  | ReqGetVal
+
+data TestResp =
+    RespSetVal
+  | RespGetVal Text
+
+
+
+data Transport m = Transport {
+    req  :: MVar m TestReq
+  , resp :: MVar m TestResp
+  }
+
+
 data NodeEnv m = NodeEnv {
-    nodeId   :: NodeId
-  , storage  :: MVar m Text
-  , threadId :: ThreadId m
+    nodeId    :: NodeId
+  , storage   :: MVar m Text
+  , threadId  :: ThreadId m
+  , transport :: Maybe (Transport m)
   }
 
 
