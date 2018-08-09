@@ -31,10 +31,12 @@ toPort (NodeId n) = 8080 + n
 data TestReq =
     ReqSetVal Text
   | ReqGetVal
+  deriving (Eq, Show)
 
 data TestResp =
     RespSetVal
   | RespGetVal (Maybe Text)
+  deriving (Eq, Show)
 
 
 

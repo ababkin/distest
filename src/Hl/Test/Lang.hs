@@ -19,7 +19,7 @@ import           Protolude                  hiding (MVar, ThreadId)
 
 
 data TestEff m r where
-  Fork          :: Proxy m -> TestEff m () -> TestEff m (ThreadId m)
+  Fork          :: Proxy m -> m () -> TestEff m (ThreadId m)
   ModifyMVar_   :: Proxy m -> MVar m a -> (a -> m a) -> TestEff m ()
   PutMVar       :: Proxy m -> MVar m a -> a -> TestEff m ()
   ReadMVar      :: Proxy m -> MVar m a -> TestEff m a
@@ -89,7 +89,7 @@ tryReadMVar' = send .: TryReadMVar
 fork'
   :: (Member (TestEff m) effs)
   => Proxy m
-  -> TestEff m ()
+  -> m ()
   -> Eff effs (ThreadId m)
 fork' = send .: Fork
 

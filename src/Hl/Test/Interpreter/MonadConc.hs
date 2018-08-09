@@ -23,7 +23,7 @@ run
   => Eff '[TestEff m, m] a
   -> m a
 run = runM . interpretM (\case
-        Fork          (p :: Proxy m) cont        -> fork $ runM (interpretM cont)
+        Fork          (p :: Proxy m) cont        -> fork cont
         PutMVar       (p :: Proxy m) mv val      -> putMVar mv val
         ReadMVar      (p :: Proxy m) mv          -> readMVar mv
         TakeMVar      (p :: Proxy m) mv          -> takeMVar mv
