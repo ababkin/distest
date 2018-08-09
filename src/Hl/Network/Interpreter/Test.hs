@@ -71,13 +71,13 @@ run proxy netEnv@NetEnv{ nodes } = interpret (\case
         pure Nothing
 
   StartNodeServer nodeId -> do
-    storage <- newMVar' proxy "empty"
+    storage   <- newMVar' proxy "empty"
     transport <- newTransport proxy
 
     threadId <- fork' proxy $ forever $ do
       handleRequest transport $ \case
-        ReqSetVal val -> H.setVal' proxy storage val >> pure RespSetVal -- putMVar resps RespSetVal
-        ReqGetVal     -> H.getVal' proxy storage >>= pure . RespGetVal -- putMVar resps . RespGetVal
+        ReqSetVal val -> H.setVal' proxy storage val  >>  pure RespSetVal
+        ReqGetVal     -> H.getVal' proxy storage      >>= pure . RespGetVal
 
     modifyMVar_' proxy nodes $ pure . Map.insert nodeId NodeEnv{
         nodeId
@@ -89,7 +89,7 @@ run proxy netEnv@NetEnv{ nodes } = interpret (\case
   )
 
   where
-    setVal :<|> getVal = api `clientIn` (Proxy :: Proxy (TestClient effs m))
+    -- setVal :<|> getVal = api `clientIn` (Proxy :: Proxy (TestClient effs m))
 
     newTransport p = Transport <$> newEmptyMVar' p <*> newEmptyMVar' p
 
