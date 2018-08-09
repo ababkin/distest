@@ -1,0 +1,61 @@
+name:                distest
+version:             0.1.0.0
+license:             MIT
+author:              "Alex Babkin"
+default-extensions:
+  - NoImplicitPrelude
+  - OverloadedStrings
+    
+extra-source-files:
+  - README.md
+  - ChangeLog.md
+
+dependencies:
+  - aeson
+  - base >= 4.7 && < 5
+  - binary
+  - bytestring
+  - concurrency
+  - containers
+  - freer-simple
+  - http-client
+  - http-types
+  - protolude
+  - servant
+  - servant-client
+  - servant-client-core
+  - servant-server
+  - warp
+
+
+library:
+  source-dirs: src
+
+executables:
+  distest-exe:
+    main:                Main.hs
+    source-dirs:         app
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - distest
+
+tests:
+  distest-test:
+    main:                Spec.hs
+    source-dirs:         test
+    ghc-options:
+      - -threaded
+      - -rtsopts
+      - -with-rtsopts=-N
+    dependencies:
+      - distest
+      - concurrency
+      - dejafu
+      - tasty
+      - tasty-ant-xml
+      - tasty-hspec
+
+

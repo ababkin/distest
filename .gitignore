@@ -1,0 +1,9 @@
+*.stack-work/
+*.cabal
+.cidfile
+.build
+TAGS
+tests/artifacts/*
+hscope.out
+codex.tags
+
