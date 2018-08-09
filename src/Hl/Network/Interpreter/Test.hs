@@ -17,10 +17,10 @@ import           Control.Concurrent.Classy
 import           Control.Monad.Freer         hiding (run)
 import qualified Data.Map                    as Map
 import           Hl.Network.Lang
+import qualified Hl.Node.Handler             as H
 import qualified Hl.Node.Interpreter.Test    as NodeIpret
 import           Hl.Node.Lang                hiding (GetVal, SetVal)
 import           Hl.Node.Servant.Api         (api)
-import qualified Hl.Node.Servant.Handler     as H
 import           Hl.Node.Servant.Test.Client
 import           Hl.Test.Lang
 import           Protolude                   hiding (Chan, MVar, putMVar,

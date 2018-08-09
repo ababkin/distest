@@ -4,8 +4,8 @@
 
 module Hl.Node.Servant.IO.Server where
 
-import           Hl.Node.Servant.Api     (Routes (..))
-import           Hl.Node.Servant.Handler (getVal', setVal')
+import           Hl.Node.Handler        (getVal', setVal')
+import           Hl.Node.Servant.Api    (Routes (..))
 import           Protolude
 import           Servant.API
 import           Servant.Server
@@ -28,7 +28,7 @@ setVal
   -> Text
   -> Handler NoContent
 setVal storage val =
-  liftIO $ setVal' ioProxy storage val
+  liftIO $ setVal' ioProxy storage val >> pure NoContent
 
 getVal
   :: MVar Text

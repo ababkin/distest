@@ -10,7 +10,6 @@
 {-# LANGUAGE ScopedTypeVariables        #-}
 {-# LANGUAGE TypeOperators              #-}
 {-# LANGUAGE UndecidableInstances       #-}
-{-# LANGUAGE ViewPatterns               #-}
 
 module Hl.Node.Servant.Test.Client where
 
@@ -18,14 +17,14 @@ import           Control.Concurrent.Classy
 import           Control.Monad.Freer
 import           Data.Binary.Builder        hiding (empty)
 import qualified Data.ByteString.Lazy.Char8 as LBS8
+import qualified Hl.Node.Handler            as H
 import           Hl.Node.Lang               hiding (GetVal, SetVal)
-import qualified Hl.Node.Servant.Handler    as H
 import           Hl.Test.Lang
 import           Network.HTTP.Types         (Status (..), hContentType, http11)
 import           Protolude                  hiding (MVar)
 import           Servant.Client.Core
 
-
+{-
 newtype TestClient effs m a = TestClient{ unTestClient :: ReaderT (NodeEnv m) (Eff effs) a }
   deriving (Functor, Applicative, Monad, MonadReader (NodeEnv m))
 
@@ -74,4 +73,4 @@ instance (MonadConc m, Member (TestEff m) effs, Member m effs) => RunClient (Tes
   streamingRequest = panic "no streaming implemented"
   throwServantError e = panic $ "throwServantError: " <> show e
 
-
+-}

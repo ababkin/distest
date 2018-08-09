@@ -2,12 +2,11 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE TypeOperators #-}
 
-module Hl.Node.Servant.Handler where
+module Hl.Node.Handler where
 
 import           Control.Concurrent.Classy
 import           Protolude                 hiding (MVar, modifyMVar_,
                                             tryReadMVar)
-import           Servant.API               (NoContent (NoContent))
 
 
 setVal'
@@ -15,10 +14,9 @@ setVal'
   => Proxy m
   -> MVar m Text
   -> Text
-  -> m NoContent
-setVal' _ storage val = do
+  -> m ()
+setVal' _ storage val =
   modifyMVar_ storage (const $ pure val)
-  pure NoContent
 
 getVal'
   :: (MonadConc m)
