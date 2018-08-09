@@ -43,7 +43,7 @@ run proxy netEnv@NetEnv{ nodes } = interpret (\case
         -- this should be run in the node's server thread, not here
         -- run proxy netEnv $ NodeIpret.run proxy nodeEnv $ setVal' (payload <> " by " <> show callerNodeId)
 
-        runTestClient nodeEnv $ setEndp payload
+        runTestClient nodeEnv $ setVal payload
         pass
 
       Nothing ->
@@ -56,7 +56,7 @@ run proxy netEnv@NetEnv{ nodes } = interpret (\case
         -- this should be run in the node's server thread, not here
         -- run proxy netEnv $ NodeIpret.run proxy nodeEnv getVal'
 
-        runTestClient nodeEnv getEndp
+        runTestClient nodeEnv getVal
 
       Nothing ->
         pure Nothing
@@ -76,6 +76,5 @@ run proxy netEnv@NetEnv{ nodes } = interpret (\case
   )
 
   where
-
-    (setEndp :<|> getEndp) = api `clientIn` (Proxy :: Proxy (TestClient effs m))
+    setVal :<|> getVal = api `clientIn` (Proxy :: Proxy (TestClient effs m))
 
