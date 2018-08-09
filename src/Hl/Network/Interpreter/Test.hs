@@ -23,7 +23,8 @@ import           Hl.Node.Servant.Api         (api)
 import qualified Hl.Node.Servant.Handler     as H
 import           Hl.Node.Servant.Test.Client
 import           Hl.Test.Lang
-import           Protolude                   hiding (MVar, putMVar, takeMVar)
+import           Protolude                   hiding (Chan, MVar, putMVar,
+                                              readChan, takeMVar)
 import           Servant.API
 import           Servant.Client.Core
 
@@ -91,13 +92,15 @@ run proxy netEnv@NetEnv{ nodes } = interpret (\case
   where
     -- setVal :<|> getVal = api `clientIn` (Proxy :: Proxy (TestClient effs m))
 
-    newTransport p = Transport <$> newEmptyMVar' p <*> newEmptyMVar' p
+    newTransport p = Transport <$> newChan' p
 
     makeRequest :: Transport m -> TestReq -> Eff effs TestResp
-    makeRequest Transport{ reqs, resps } req = do
-      putMVar' proxy reqs req
-      takeMVar' proxy resps
+    makeRequest Transport{ reqs } req = do
+      resp <- newEmptyMVar' proxy
+      writeChan' proxy reqs (req, resp)
+      takeMVar' proxy resp
 
     handleRequest :: Transport m -> (TestReq -> m TestResp) -> m ()
-    handleRequest Transport{ reqs, resps } handler =
-      putMVar resps =<< handler =<< takeMVar reqs
+    handleRequest Transport{ reqs } handler = do
+      (req, resp) <- readChan reqs
+      putMVar resp =<< handler req

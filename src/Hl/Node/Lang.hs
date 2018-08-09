@@ -16,7 +16,7 @@ import           Control.Monad.Freer.State
 import           Control.Monad.Freer.Writer
 import           Core.Curry
 import           Hl.Test.Lang
-import           Protolude                  hiding (MVar, ThreadId)
+import           Protolude                  hiding (Chan, MVar, ThreadId)
 import           System.Exit                hiding (ExitCode (ExitSuccess))
 
 
@@ -41,8 +41,7 @@ data TestResp =
 
 
 data Transport m = Transport {
-    reqs  :: MVar m TestReq
-  , resps :: MVar m TestResp
+    reqs  :: Chan m (TestReq, MVar m TestResp)
   }
 
 

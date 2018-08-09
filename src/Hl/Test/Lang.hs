@@ -15,7 +15,7 @@ import           Control.Monad.Freer.Error
 import           Control.Monad.Freer.State
 import           Control.Monad.Freer.Writer
 import           Core.Curry
-import           Protolude                  hiding (MVar, ThreadId)
+import           Protolude                  hiding (Chan, MVar, ThreadId)
 
 
 data TestEff m r where
@@ -28,6 +28,9 @@ data TestEff m r where
   NewEmptyMVar  :: Proxy m -> TestEff m (MVar m a)
   TryTakeMVar   :: Proxy m -> MVar m a -> TestEff m (Maybe a)
   TryReadMVar   :: Proxy m -> MVar m a -> TestEff m (Maybe a)
+  NewChan       :: Proxy m -> TestEff m (Chan m a)
+  WriteChan     :: Proxy m -> Chan m a -> a -> TestEff m ()
+  ReadChan      :: Proxy m -> Chan m a -> TestEff m a
 
 modifyMVar_'
   :: (Member (TestEff m) effs)
@@ -92,4 +95,25 @@ fork'
   -> m ()
   -> Eff effs (ThreadId m)
 fork' = send .: Fork
+
+newChan'
+  :: (Member (TestEff m) effs)
+  => Proxy m
+  -> Eff effs (Chan m a)
+newChan' = send . NewChan
+
+writeChan'
+  :: (Member (TestEff m) effs)
+  => Proxy m
+  -> Chan m a
+  -> a
+  -> Eff effs ()
+writeChan' = send .:: WriteChan
+
+readChan'
+  :: (Member (TestEff m) effs)
+  => Proxy m
+  -> Chan m a
+  -> Eff effs a
+readChan' = send .: ReadChan
 
