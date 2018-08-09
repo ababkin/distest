@@ -39,14 +39,13 @@ run proxy netEnv@NetEnv{ nodes } = interpret (\case
   CallSetNodeVal callerNodeId targetNodeId payload -> do
     nodes' <- readMVar' proxy nodes
     case Map.lookup targetNodeId nodes' of
-      Just nodeEnv@NodeEnv{ transport = Just (Transport{ reqs, resps }) } -> do
+      Just nodeEnv@NodeEnv{ transport = Just transport } -> do
         -- this should be run in the node's server thread, not here
         -- run proxy netEnv $ NodeIpret.run proxy nodeEnv $ setVal' (payload <> " by " <> show callerNodeId)
 
         -- runTestClient nodeEnv $ setVal payload
 
-        putMVar' proxy reqs $ ReqSetVal payload
-        resp <- takeMVar' proxy resps
+        resp <- makeRequest transport $ ReqSetVal payload
         case resp of
           RespSetVal  -> pass
           unexpected  -> panic $ "received unexpected response: " <> show unexpected
@@ -57,14 +56,13 @@ run proxy netEnv@NetEnv{ nodes } = interpret (\case
   CallGetNodeVal callerNodeId targetNodeId -> do
     nodes' <- readMVar' proxy nodes
     case Map.lookup targetNodeId nodes' of
-      Just nodeEnv@NodeEnv{ transport = Just (Transport{ reqs, resps }) } -> do
+      Just nodeEnv@NodeEnv{ transport = Just transport } -> do
         -- this should be run in the node's server thread, not here
         -- run proxy netEnv $ NodeIpret.run proxy nodeEnv getVal'
 
         -- runTestClient nodeEnv getVal
 
-        putMVar' proxy reqs ReqGetVal
-        resp <- takeMVar' proxy resps
+        resp <- makeRequest transport ReqGetVal
         case resp of
           RespGetVal val  -> pure val
           unexpected      -> panic $ "received unexpected response: " <> show unexpected
@@ -74,16 +72,12 @@ run proxy netEnv@NetEnv{ nodes } = interpret (\case
 
   StartNodeServer nodeId -> do
     storage <- newMVar' proxy "empty"
-    transport@Transport{ reqs, resps } <- newTransport proxy
+    transport <- newTransport proxy
 
-    let go :: m () = do
-          req <- takeMVar reqs
-          case req of
-            ReqSetVal val -> H.setVal' proxy storage val >> putMVar resps RespSetVal
-            ReqGetVal     -> H.getVal' proxy storage >>= putMVar resps . RespGetVal
-          pass
-
-    threadId <- fork' proxy $ forever go
+    threadId <- fork' proxy $ forever $ do
+      handleRequest transport $ \case
+        ReqSetVal val -> H.setVal' proxy storage val >> pure RespSetVal -- putMVar resps RespSetVal
+        ReqGetVal     -> H.getVal' proxy storage >>= pure . RespGetVal -- putMVar resps . RespGetVal
 
     modifyMVar_' proxy nodes $ pure . Map.insert nodeId NodeEnv{
         nodeId
@@ -98,3 +92,12 @@ run proxy netEnv@NetEnv{ nodes } = interpret (\case
     setVal :<|> getVal = api `clientIn` (Proxy :: Proxy (TestClient effs m))
 
     newTransport p = Transport <$> newEmptyMVar' p <*> newEmptyMVar' p
+
+    makeRequest :: Transport m -> TestReq -> Eff effs TestResp
+    makeRequest Transport{ reqs, resps } req = do
+      putMVar' proxy reqs req
+      takeMVar' proxy resps
+
+    handleRequest :: Transport m -> (TestReq -> m TestResp) -> m ()
+    handleRequest Transport{ reqs, resps } handler =
+      putMVar resps =<< handler =<< takeMVar reqs
