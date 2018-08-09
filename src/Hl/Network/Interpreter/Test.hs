@@ -40,13 +40,13 @@ run proxy netEnv@NetEnv{ nodes } = interpret (\case
   CallSetNodeVal callerNodeId targetNodeId payload -> do
     nodes' <- readMVar' proxy nodes
     case Map.lookup targetNodeId nodes' of
-      Just nodeEnv@NodeEnv{ transport = Just transport } -> do
+      Just nodeEnv -> do
         -- this should be run in the node's server thread, not here
         -- run proxy netEnv $ NodeIpret.run proxy nodeEnv $ setVal' (payload <> " by " <> show callerNodeId)
 
         -- runTestClient nodeEnv $ setVal payload
 
-        resp <- makeRequest transport $ ReqSetVal payload
+        resp <- makeRequest nodeEnv $ ReqSetVal payload
         case resp of
           RespSetVal  -> pass
           unexpected  -> panic $ "received unexpected response: " <> show unexpected
@@ -57,13 +57,13 @@ run proxy netEnv@NetEnv{ nodes } = interpret (\case
   CallGetNodeVal callerNodeId targetNodeId -> do
     nodes' <- readMVar' proxy nodes
     case Map.lookup targetNodeId nodes' of
-      Just nodeEnv@NodeEnv{ transport = Just transport } -> do
+      Just nodeEnv -> do
         -- this should be run in the node's server thread, not here
         -- run proxy netEnv $ NodeIpret.run proxy nodeEnv getVal'
 
         -- runTestClient nodeEnv getVal
 
-        resp <- makeRequest transport ReqGetVal
+        resp <- makeRequest nodeEnv ReqGetVal
         case resp of
           RespGetVal val  -> pure val
           unexpected      -> panic $ "received unexpected response: " <> show unexpected
@@ -94,11 +94,13 @@ run proxy netEnv@NetEnv{ nodes } = interpret (\case
 
     newTransport p = Transport <$> newChan' p
 
-    makeRequest :: Transport m -> TestReq -> Eff effs TestResp
-    makeRequest Transport{ reqs } req = do
+    makeRequest :: NodeEnv m -> TestReq -> Eff effs TestResp
+    makeRequest NodeEnv{ transport = Just (Transport{ reqs })} req = do
       resp <- newEmptyMVar' proxy
+      -- TODO: would be nice to mess with the order of requests in the pipeline
       writeChan' proxy reqs (req, resp)
       takeMVar' proxy resp
+    makeRequest NodeEnv{ transport = Nothing } _ = panic "no transport"
 
     handleRequest :: Transport m -> (TestReq -> m TestResp) -> m ()
     handleRequest Transport{ reqs } handler = do
