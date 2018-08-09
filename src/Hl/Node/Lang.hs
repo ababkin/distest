@@ -34,13 +34,13 @@ data TestReq =
 
 data TestResp =
     RespSetVal
-  | RespGetVal Text
+  | RespGetVal (Maybe Text)
 
 
 
 data Transport m = Transport {
-    req  :: MVar m TestReq
-  , resp :: MVar m TestResp
+    reqs  :: MVar m TestReq
+  , resps :: MVar m TestResp
   }
 
 

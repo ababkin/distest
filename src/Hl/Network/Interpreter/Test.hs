@@ -62,21 +62,24 @@ run proxy netEnv@NetEnv{ nodes } = interpret (\case
         pure Nothing
 
   StartNodeServer nodeId -> do
-    -- TODO
     storage <- newMVar' proxy "empty"
-    transport <- Just <$> newTransport proxy
+    transport@Transport{ reqs, resps } <- newTransport proxy
 
-    threadId <- fork' proxy $
-      {- (panic "server unimplemented" :: m ()) -}
-      --
-      -- asynchronously start the node's server
-      pass
+    let go :: m () = do
+          pass
+
+          {- req <- takeMVar' proxy reqs -}
+          {- case req of -}
+            {- ReqSetVal val -> panic "da" -- H.setVal' proxy storage val -- >> putMVar' proxy resps (RespSetVal) -}
+            {- ReqGetVal     -> panic "net" -- H.getVal' proxy storage >> pure NoContent -- >>= putMVar' proxy resps . RespGetVal -}
+
+    threadId <- fork' proxy $ forever go
 
     modifyMVar_' proxy nodes $ pure . Map.insert nodeId NodeEnv{
         nodeId
       , storage
       , threadId
-      , transport
+      , transport = Just transport
       }
 
   )
