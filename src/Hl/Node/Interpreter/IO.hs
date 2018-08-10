@@ -13,21 +13,23 @@
 module Hl.Node.Interpreter.IO where
 
 import           Control.Concurrent.Classy
-import           Control.Monad.Freer       hiding (run)
+import           Control.Monad.Freer           hiding (run)
 import           Data.Aeson
-import qualified Data.Map                  as Map
+import qualified Data.Map                      as Map
 import           Data.Proxy
 import           GHC.Generics
 import           Hl.Network.Lang
-import qualified Hl.Node.Handler           as H
+import qualified Hl.Node.Handler               as H
 import           Hl.Node.Lang
-import           Hl.Node.Servant.Api       (Routes (..))
-import           Hl.Node.Servant.IO.Client (getVal, setVal)
+import           Hl.Node.Servant.Api           (Routes (..))
+import           Hl.Node.Servant.IO.Client     (getVal, setVal)
+import qualified Hl.Test.Interpreter.MonadConc as TestIpret
 import           Hl.Test.Lang
-import           Network.HTTP.Client       (defaultManagerSettings, newManager)
-import qualified Network.Wai.Handler.Warp  as Warp (run)
-import           Protolude                 hiding (MVar, modifyMVar_, newMVar,
-                                            tryReadMVar)
+import           Network.HTTP.Client           (defaultManagerSettings,
+                                                newManager)
+import qualified Network.Wai.Handler.Warp      as Warp (run)
+import           Protolude                     hiding (MVar, modifyMVar_,
+                                                newMVar, tryReadMVar)
 import           Servant.API
 import           Servant.Client
 import           Servant.Server
@@ -37,8 +39,8 @@ import           Servant.Server.Generic
 run
   :: forall a
   .  NodeEnv IO
-  -> (Eff '[NodeEff, IO] a -> IO a)
-run NodeEnv{ nodeId, storage } = runM . interpret (\case
+  -> (Eff '[NodeEff, TestEff IO, IO] a -> Eff '[TestEff IO, IO] a)
+run NodeEnv{ nodeId, storage } = interpret (\case
 
   SetNodeVal targetNodeId payload -> liftIO $ do
 
@@ -67,11 +69,11 @@ run NodeEnv{ nodeId, storage } = runM . interpret (\case
         putStrLn ("got value: " <> show val <> " from node: " <> show targetNodeId :: Text)
         pure val
 
-  SetVal val -> liftIO $ do
-    modifyMVar_ storage (const $ pure val)
+  SetVal val -> do
+    modifyMVar_' ioProxy storage (const $ pure val)
 
-  GetVal -> liftIO $ do
-    tryReadMVar storage
+  GetVal -> do
+    tryReadMVar' ioProxy storage
 
   )
 
@@ -92,14 +94,13 @@ server nodeEnv@NodeEnv{ storage } = Routes
       :: Text
       -> Handler NoContent
     setVal val = do
-      liftIO $ run nodeEnv $ H.setVal val
+      liftIO $ TestIpret.run $ run nodeEnv $ H.setVal ioProxy val
       pure NoContent
 
     getVal
       :: Handler (Maybe Text)
     getVal = do
-      liftIO $ run nodeEnv $ H.getVal
+      liftIO $ TestIpret.run $ run nodeEnv $ H.getVal ioProxy
 
 app :: NodeEnv IO -> Application
 app = genericServe . server
-

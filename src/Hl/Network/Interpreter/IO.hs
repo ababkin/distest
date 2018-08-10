@@ -33,6 +33,7 @@ import           Servant.Client
 import           Servant.Server
 import           Servant.Server.Generic
 
+
 run
   :: forall a
   .  NetEnv IO
@@ -81,5 +82,4 @@ run netEnv@NetEnv{ nodes } = runM . interpret (\case
     modifyMVar_ nodes $ pure . Map.insert nodeId nodeEnv
 
   )
-
 

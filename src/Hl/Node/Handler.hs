@@ -15,18 +15,20 @@ import           Protolude                 hiding (MVar, modifyMVar_,
 
 
 setVal
-  :: forall effs
-  .  (Member NodeEff effs)
-  => Text
+  :: forall m effs
+  .  (MonadConc m, Member (TestEff m) effs, Member NodeEff effs)
+  => Proxy m
+  -> Text
   -> Eff effs ()
-setVal val =
+setVal _ val =
   setVal' val
 
 getVal
-  :: forall effs
-  .  (Member NodeEff effs)
-  => Eff effs (Maybe Text)
-getVal =
+  :: forall m effs
+  .  (MonadConc m, Member (TestEff m) effs, Member NodeEff effs)
+  => Proxy m
+  -> Eff effs (Maybe Text)
+getVal _ =
   getVal'
 
 

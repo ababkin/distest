@@ -84,8 +84,8 @@ run proxy netEnv@NetEnv{ nodes } = interpret (\case
     fork' proxy $ forever $ do
       (req, resp) <- readChan' proxy reqs
       putMVar' proxy resp =<< case req of
-        ReqSetVal val -> (run proxy netEnv $ NodeIpret.run proxy nodeEnv $ H.setVal val)  >>  pure RespSetVal
-        ReqGetVal     -> (run proxy netEnv $ NodeIpret.run proxy nodeEnv $ H.getVal)      >>= pure . RespGetVal
+        ReqSetVal val -> (run proxy netEnv $ NodeIpret.run proxy nodeEnv $ H.setVal proxy val)  >>  pure RespSetVal
+        ReqGetVal     -> (run proxy netEnv $ NodeIpret.run proxy nodeEnv $ H.getVal proxy)      >>= pure . RespGetVal
 
     modifyMVar_' proxy nodes $ pure . Map.insert nodeId nodeEnv
 
