@@ -48,7 +48,6 @@ data Transport m = Transport {
 data NodeEnv m = NodeEnv {
     nodeId    :: NodeId
   , storage   :: MVar m Text
-  , threadId  :: ThreadId m
   , transport :: Maybe (Transport m)
   }
 

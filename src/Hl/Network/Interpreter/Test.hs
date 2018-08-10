@@ -75,7 +75,7 @@ run proxy netEnv@NetEnv{ nodes } = interpret (\case
     storage   <- newMVar' proxy "empty"
     transport <- newTransport proxy
 
-    threadId <- fork' proxy $ forever $ do
+    fork' proxy $ forever $ do
       handleRequest transport $ \case
         ReqSetVal val -> H.setVal' proxy storage val  >>  pure RespSetVal
         ReqGetVal     -> H.getVal' proxy storage      >>= pure . RespGetVal
@@ -83,7 +83,6 @@ run proxy netEnv@NetEnv{ nodes } = interpret (\case
     modifyMVar_' proxy nodes $ pure . Map.insert nodeId NodeEnv{
         nodeId
       , storage
-      , threadId
       , transport = Just transport
       }
 

@@ -1,44 +1,50 @@
-{-# LANGUAGE DataKinds     #-}
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE DataKinds      #-}
+{-# LANGUAGE DeriveGeneric  #-}
+{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE TypeOperators  #-}
 
 module Hl.Node.Servant.IO.Server where
 
-import           Hl.Node.Handler        (getVal', setVal')
-import           Hl.Node.Servant.Api    (Routes (..))
+{- import qualified Hl.Network.Interpreter.IO     as NetIpret -}
+import qualified Hl.Node.Handler               as H
+import qualified Hl.Node.Interpreter.Test      as NodeIpret
+import           Hl.Node.Lang
+import           Hl.Node.Servant.Api           (Routes (..))
+import qualified Hl.Test.Interpreter.MonadConc as TestIpret
 import           Protolude
 import           Servant.API
 import           Servant.Server
 import           Servant.Server.Generic
 
-
+{-
 ioProxy :: Proxy IO
 ioProxy = Proxy
 
 server
-  :: MVar Text
+  :: NodeEnv IO
   -> Routes AsServer
-server storage = Routes
-  { _set = setVal storage
-  , _get = getVal storage
+server nodeEnv@NodeEnv{ storage } = Routes
+  { _set = setVal
+  , _get = getVal
   }
 
-setVal
-  :: MVar Text
-  -> Text
-  -> Handler NoContent
-setVal storage val =
-  liftIO $ setVal' ioProxy storage val >> pure NoContent
+  where
+    setVal
+      :: Text
+      -> Handler NoContent
+    setVal val = do
+      netEnv <- NetEnv <$> newMVar empty
+      liftIO $ TestIpret.run $ NetIpret.run netEnv $ NodeIpret.run ioProxy nodeEnv $ H.setVal' ioProxy storage val >> pure NoContent
 
-getVal
-  :: MVar Text
-  -> Handler (Maybe Text)
-getVal storage =
-  liftIO $ getVal' ioProxy storage
+    getVal
+      :: Handler (Maybe Text)
+    getVal = do
+      netEnv <- NetEnv <$> newMVar empty
+      liftIO $ TestIpret.run $ NetIpret.run netEnv $ NodeIpret.run ioProxy nodeEnv $ H.getVal' ioProxy storage
 
-app :: MVar Text -> Application
+app :: NodeEnv IO -> Application
 app = genericServe . server
 
-
+-}
 
 

@@ -13,22 +13,30 @@
 module Hl.Network.Interpreter.IO where
 
 import           Control.Concurrent.Classy
-import           Control.Monad.Freer       hiding (run)
+import           Control.Monad.Freer           hiding (run)
 import           Data.Aeson
-import qualified Data.Map                  as Map
+import qualified Data.Map                      as Map
 import           Data.Proxy
 import           GHC.Generics
 import           Hl.Network.Lang
-import qualified Hl.Node.Interpreter.Test  as NodeIpret
+import qualified Hl.Node.Interpreter.Test      as NodeIpret
 import           Hl.Node.Lang
-import           Hl.Node.Servant.Api       (Routes (..))
-import           Hl.Node.Servant.IO.Client (getVal, setVal)
-import           Hl.Node.Servant.IO.Server (app)
+import           Hl.Node.Servant.Api           (Routes (..))
+import           Hl.Node.Servant.IO.Client     (getVal, setVal)
+{- import           Hl.Node.Servant.IO.Server (app) -}
+import qualified Hl.Node.Handler               as H
+import qualified Hl.Node.Interpreter.Test      as NodeIpret
+import qualified Hl.Test.Interpreter.MonadConc as TestIpret
 import           Hl.Test.Lang
-import           Network.HTTP.Client       (defaultManagerSettings, newManager)
-import qualified Network.Wai.Handler.Warp  as Warp (run)
-import           Protolude                 hiding (MVar, modifyMVar_, newMVar)
+import           Network.HTTP.Client           (defaultManagerSettings,
+                                                newManager)
+import qualified Network.Wai.Handler.Warp      as Warp (run)
+import           Protolude                     hiding (MVar, modifyMVar_,
+                                                newMVar)
+import           Servant.API
 import           Servant.Client
+import           Servant.Server
+import           Servant.Server.Generic
 
 
 run
@@ -67,16 +75,50 @@ run netEnv@NetEnv{ nodes } = runM . interpret (\case
   StartNodeServer nodeId -> liftIO $ do
     storage <- newMVar "empty"
 
-    threadId <- forkIO $
-      Warp.run (toPort nodeId) (app storage)
+    let nodeEnv = NodeEnv{
+            nodeId
+          , storage
+          , transport = Nothing
+          }
 
-    modifyMVar_ nodes $ pure . Map.insert nodeId NodeEnv{
-        nodeId
-      , storage
-      , threadId
-      , transport = Nothing
-      }
+    forkIO $
+      Warp.run (toPort nodeId) (app nodeEnv)
+
+    modifyMVar_ nodes $ pure . Map.insert nodeId nodeEnv
 
   )
+
+
+ioProxy :: Proxy IO
+ioProxy = Proxy
+
+server
+  :: NodeEnv IO
+  -> Routes AsServer
+server nodeEnv@NodeEnv{ storage } = Routes
+  { _set = setVal
+  , _get = getVal
+  }
+
+  where
+    setVal
+      :: Text
+      -> Handler NoContent
+    setVal val = do
+      netEnv <- NetEnv <$> newMVar empty
+      liftIO $ run netEnv $ TestIpret.run $ NodeIpret.run ioProxy nodeEnv $ H.setVal' ioProxy storage val
+      pure NoContent
+
+    getVal
+      :: Handler (Maybe Text)
+    getVal = do
+      netEnv <- NetEnv <$> newMVar empty
+      liftIO $ run netEnv $ TestIpret.run $ NodeIpret.run ioProxy nodeEnv $ H.getVal' ioProxy storage
+
+app :: NodeEnv IO -> Application
+app = genericServe . server
+
+
+
 
 
