@@ -10,7 +10,7 @@
 {-# LANGUAGE TypeApplications      #-}
 {-# LANGUAGE TypeOperators         #-}
 
-module Hl.Network.Interpreter.IO where
+module Hl.Node.Interpreter.IO where
 
 import           Control.Concurrent.Classy
 import           Control.Monad.Freer       hiding (run)
@@ -20,28 +20,29 @@ import           Data.Proxy
 import           GHC.Generics
 import           Hl.Network.Lang
 import qualified Hl.Node.Handler           as H
-import qualified Hl.Node.Interpreter.IO    as NodeIpret
 import           Hl.Node.Lang
 import           Hl.Node.Servant.Api       (Routes (..))
 import           Hl.Node.Servant.IO.Client (getVal, setVal)
 import           Hl.Test.Lang
 import           Network.HTTP.Client       (defaultManagerSettings, newManager)
 import qualified Network.Wai.Handler.Warp  as Warp (run)
-import           Protolude                 hiding (MVar, modifyMVar_, newMVar)
+import           Protolude                 hiding (MVar, modifyMVar_, newMVar,
+                                            tryReadMVar)
 import           Servant.API
 import           Servant.Client
 import           Servant.Server
 import           Servant.Server.Generic
 
+
 run
   :: forall a
-  .  NetEnv IO
-  -> (Eff '[NetEff, IO] a -> IO a)
-run netEnv@NetEnv{ nodes } = runM . interpret (\case
+  .  NodeEnv IO
+  -> (Eff '[NodeEff, IO] a -> IO a)
+run NodeEnv{ nodeId, storage } = runM . interpret (\case
 
-  CallSetNodeVal callerNodeId targetNodeId payload -> liftIO $ do
+  SetNodeVal targetNodeId payload -> liftIO $ do
 
-    let val     = payload <> " by " <> show callerNodeId
+    let val     = payload <> " by " <> show nodeId
         action  = setVal val
 
     mgr <- newManager defaultManagerSettings
@@ -52,7 +53,7 @@ run netEnv@NetEnv{ nodes } = runM . interpret (\case
       Right _ ->
         putStrLn $ "value successfully set on node: " <> show targetNodeId <> ", " <> val
 
-  CallGetNodeVal callerNodeId targetNodeId -> liftIO $ do
+  GetNodeVal targetNodeId -> liftIO $ do
 
     let action = getVal
 
@@ -66,20 +67,39 @@ run netEnv@NetEnv{ nodes } = runM . interpret (\case
         putStrLn ("got value: " <> show val <> " from node: " <> show targetNodeId :: Text)
         pure val
 
-  StartNodeServer nodeId -> liftIO $ do
-    storage <- newMVar "empty"
+  SetVal val -> liftIO $ do
+    modifyMVar_ storage (const $ pure val)
 
-    let nodeEnv = NodeEnv{
-            nodeId
-          , storage
-          , transport = Nothing
-          }
-
-    forkIO $
-      Warp.run (toPort nodeId) (NodeIpret.app nodeEnv)
-
-    modifyMVar_ nodes $ pure . Map.insert nodeId nodeEnv
+  GetVal -> liftIO $ do
+    tryReadMVar storage
 
   )
 
+
+ioProxy :: Proxy IO
+ioProxy = Proxy
+
+server
+  :: NodeEnv IO
+  -> Routes AsServer
+server nodeEnv@NodeEnv{ storage } = Routes
+  { _set = setVal
+  , _get = getVal
+  }
+
+  where
+    setVal
+      :: Text
+      -> Handler NoContent
+    setVal val = do
+      liftIO $ run nodeEnv $ H.setVal val
+      pure NoContent
+
+    getVal
+      :: Handler (Maybe Text)
+    getVal = do
+      liftIO $ run nodeEnv $ H.getVal
+
+app :: NodeEnv IO -> Application
+app = genericServe . server
 

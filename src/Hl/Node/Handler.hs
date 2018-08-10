@@ -14,23 +14,19 @@ import           Protolude                 hiding (MVar, modifyMVar_,
                                             tryReadMVar)
 
 
-setVal'
-  :: forall m effs a
-  .  (MonadConc m, Member NodeEff effs, Member (TestEff m) effs)
-  => Proxy m
-  -> MVar m Text
-  -> Text
+setVal
+  :: forall effs
+  .  (Member NodeEff effs)
+  => Text
   -> Eff effs ()
-setVal' proxy storage val =
-  modifyMVar_' proxy storage (const $ pure val)
+setVal val =
+  setVal' val
 
-getVal'
-  :: forall m effs a
-  .  (MonadConc m, Member NodeEff effs, Member (TestEff m) effs)
-  => Proxy m
-  -> MVar m Text
-  -> Eff effs (Maybe Text)
-getVal' proxy storage =
-  tryReadMVar' proxy storage
+getVal
+  :: forall effs
+  .  (Member NodeEff effs)
+  => Eff effs (Maybe Text)
+getVal =
+  getVal'
 
 

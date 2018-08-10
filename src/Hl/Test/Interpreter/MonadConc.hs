@@ -10,7 +10,7 @@
 module Hl.Test.Interpreter.MonadConc where
 
 import           Control.Concurrent.Classy
-import           Control.Monad.Freer
+import           Control.Monad.Freer       hiding (run)
 import           Hl.Test.Lang
 import           Protolude                 hiding (Chan, modifyMVar_, newChan,
                                             newEmptyMVar, newMVar, newemptyMVar,
@@ -24,7 +24,7 @@ run
   => Eff '[TestEff m, m] a
   -> m a
 run = runM . interpretM (\case
-        Fork          (p :: Proxy m) cont        -> fork cont
+        Fork          (p :: Proxy m) cont        -> fork $ run cont
         PutMVar       (p :: Proxy m) mv val      -> putMVar mv val
         ReadMVar      (p :: Proxy m) mv          -> readMVar mv
         TakeMVar      (p :: Proxy m) mv          -> takeMVar mv

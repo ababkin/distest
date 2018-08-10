@@ -73,18 +73,21 @@ run proxy netEnv@NetEnv{ nodes } = interpret (\case
 
   StartNodeServer nodeId -> do
     storage   <- newMVar' proxy "empty"
-    transport <- newTransport proxy
+    transport@Transport{ reqs } <- newTransport proxy
+
+    let nodeEnv = NodeEnv{
+            nodeId
+          , storage
+          , transport = Just transport
+          }
 
     fork' proxy $ forever $ do
-      handleRequest transport $ \case
-        ReqSetVal val -> H.setVal' proxy storage val  >>  pure RespSetVal
-        ReqGetVal     -> H.getVal' proxy storage      >>= pure . RespGetVal
+      (req, resp) <- readChan' proxy reqs
+      putMVar' proxy resp =<< case req of
+        ReqSetVal val -> (run proxy netEnv $ NodeIpret.run proxy nodeEnv $ H.setVal val)  >>  pure RespSetVal
+        ReqGetVal     -> (run proxy netEnv $ NodeIpret.run proxy nodeEnv $ H.getVal)      >>= pure . RespGetVal
 
-    modifyMVar_' proxy nodes $ pure . Map.insert nodeId NodeEnv{
-        nodeId
-      , storage
-      , transport = Just transport
-      }
+    modifyMVar_' proxy nodes $ pure . Map.insert nodeId nodeEnv
 
   )
 
@@ -101,7 +104,7 @@ run proxy netEnv@NetEnv{ nodes } = interpret (\case
       takeMVar' proxy resp
     makeRequest NodeEnv{ transport = Nothing } _ = panic "no transport"
 
-    handleRequest :: Transport m -> (TestReq -> m TestResp) -> m ()
-    handleRequest Transport{ reqs } handler = do
-      (req, resp) <- readChan reqs
-      putMVar resp =<< handler req
+    {- handleRequest :: Transport m -> (TestReq -> Eff effs TestResp) -> Eff effs () -}
+    {- handleRequest Transport{ reqs } handler = do -}
+      {- (req, resp) <- readChan' proxy reqs -}
+      {- putMVar' proxy resp =<< handler req -}
